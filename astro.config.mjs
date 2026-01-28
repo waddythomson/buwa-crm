@@ -5,5 +5,7 @@ import vercel from '@astrojs/vercel/serverless';
 export default defineConfig({
   integrations: [react()],
   output: 'server',
-  adapter: vercel()
+  adapter: vercel({
+    runtime: 'nodejs20.x'
+  })
 });

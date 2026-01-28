@@ -1,0 +1,104 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { supabase } from '../../lib/supabase';
+import { getSession } from '../../lib/auth';
+
+const user = await getSession(Astro.cookies);
+if (!user) return Astro.redirect('/login');
+
+const { data: contacts } = await supabase
+  .from('contacts')
+  .select('*')
+  .order('name', { ascending: true });
+---
+
+<DashboardLayout title="Contacts">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <h1>Contacts</h1>
+    <a href="/contacts/new" class="btn">+ Add Contact</a>
+  </div>
+
+  <div class="card">
+    <input 
+      type="search" 
+      id="search" 
+      placeholder="Search contacts..."
+      style="margin-bottom: 20px;"
+    />
+    
+    <div id="contactList">
+      {contacts && contacts.length > 0 ? (
+        contacts.map(contact => (
+          <a 
+            href={`/contacts/${contact.id}`} 
+            class="contact-row"
+            data-name={contact.name?.toLowerCase()}
+            data-phone={contact.phone}
+            data-email={contact.email?.toLowerCase()}
+          >
+            <div class="contact-avatar">
+              {contact.name?.charAt(0).toUpperCase() || '?'}
+            </div>
+            <div class="contact-info">
+              <div class="contact-name">{contact.name}</div>
+              <div class="contact-detail">{contact.phone || contact.email}</div>
+            </div>
+          </a>
+        ))
+      ) : (
+        <p style="color: #666; text-align: center; padding: 40px;">No contacts yet.</p>
+      )}
+    </div>
+  </div>
+</DashboardLayout>
+
+<style>
+  .contact-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.2s;
+  }
+  .contact-row:hover {
+    background: #f3f4f6;
+  }
+  .contact-avatar {
+    width: 48px;
+    height: 48px;
+    background: #2563eb;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 20px;
+  }
+  .contact-name {
+    font-weight: 600;
+  }
+  .contact-detail {
+    color: #666;
+    font-size: 14px;
+  }
+</style>
+
+<script>
+  const search = document.getElementById('search') as HTMLInputElement;
+  const contacts = document.querySelectorAll('.contact-row');
+
+  search.addEventListener('input', () => {
+    const query = search.value.toLowerCase();
+    contacts.forEach(contact => {
+      const name = contact.getAttribute('data-name') || '';
+      const phone = contact.getAttribute('data-phone') || '';
+      const email = contact.getAttribute('data-email') || '';
+      const matches = name.includes(query) || phone.includes(query) || email.includes(query);
+      (contact as HTMLElement).style.display = matches ? 'flex' : 'none';
+    });
+  });
+</script>

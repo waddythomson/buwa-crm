@@ -1,0 +1,117 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { supabase } from '../../lib/supabase';
+import { getSession } from '../../lib/auth';
+import Timeline from '../../components/Timeline';
+
+const user = await getSession(Astro.cookies);
+if (!user) return Astro.redirect('/login');
+
+const { id } = Astro.params;
+
+// Get contact
+const { data: contact, error } = await supabase
+  .from('contacts')
+  .select('*')
+  .eq('id', id)
+  .single();
+
+if (!contact) {
+  return Astro.redirect('/contacts');
+}
+
+// Get communications
+const { data: communications } = await supabase
+  .from('communications')
+  .select('*')
+  .eq('contact_id', id)
+  .order('created_at', { ascending: true });
+
+// Get notes
+const { data: notes } = await supabase
+  .from('notes')
+  .select('*, user:users(name)')
+  .eq('contact_id', id)
+  .order('created_at', { ascending: true });
+
+// Merge and sort timeline items
+const timelineItems = [
+  ...(communications || []).map(c => ({ ...c, itemType: 'communication' as const })),
+  ...(notes || []).map(n => ({ ...n, itemType: 'note' as const }))
+].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+---
+
+<DashboardLayout title={contact.name}>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+    <div>
+      <a href="/contacts" style="color: #666; text-decoration: none; font-size: 14px;">← Back to Contacts</a>
+      <h1 style="margin-top: 8px;">{contact.name}</h1>
+      <div style="color: #666;">
+        {contact.phone && <span style="margin-right: 16px;">📱 {contact.phone}</span>}
+        {contact.email && <span>✉️ {contact.email}</span>}
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      {contact.phone && (
+        <button class="btn" onclick={`sendSMS('${contact.phone}')`}>Send SMS</button>
+      )}
+      {contact.phone && (
+        <button class="btn btn-secondary" onclick={`makeCall('${contact.phone}')`}>Call</button>
+      )}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-bottom: 20px;">Timeline</h2>
+    <Timeline 
+      client:load
+      contactId={id!}
+      items={timelineItems}
+      currentUserId={user.id}
+    />
+  </div>
+</DashboardLayout>
+
+<script>
+  function sendSMS(phone: string) {
+    const message = prompt('Enter your message:');
+    if (!message) return;
+    
+    fetch('/api/twilio/send-sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: phone, message })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        alert('Message sent!');
+        location.reload();
+      } else {
+        alert('Failed to send: ' + data.error);
+      }
+    });
+  }
+
+  function makeCall(phone: string) {
+    if (!confirm(`Call ${phone}?`)) return;
+    
+    fetch('/api/twilio/make-call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: phone })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        alert('Calling...');
+      } else {
+        alert('Failed to call: ' + data.error);
+      }
+    });
+  }
+  
+  // Make functions available globally
+  (window as any).sendSMS = sendSMS;
+  (window as any).makeCall = makeCall;
+</script>

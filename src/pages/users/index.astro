@@ -1,0 +1,127 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { supabase } from '../../lib/supabase';
+import { getSession } from '../../lib/auth';
+import { sendOTP } from '../../lib/twilio';
+
+const user = await getSession(Astro.cookies);
+if (!user) return Astro.redirect('/login');
+
+// Only admins can access this page
+if (user.role !== 'admin') {
+  return Astro.redirect('/');
+}
+
+// Handle invite form
+let message = '';
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const name = formData.get('name') as string;
+  const phone = formData.get('phone') as string;
+  const email = formData.get('email') as string;
+  const role = formData.get('role') as string;
+
+  // Create user
+  const { data: newUser, error } = await supabase
+    .from('users')
+    .insert({
+      name,
+      phone: phone || null,
+      email: email || null,
+      role,
+      status: 'invited',
+      invited_by: user.id
+    })
+    .select()
+    .single();
+
+  if (error) {
+    message = `Error: ${error.message}`;
+  } else {
+    // Send invite OTP
+    try {
+      const to = phone || email;
+      const channel = phone ? 'sms' : 'email';
+      await sendOTP(to!, channel as 'sms' | 'email');
+      message = `Invite sent to ${name}!`;
+    } catch (err: any) {
+      message = `User created, but failed to send invite: ${err.message}`;
+    }
+  }
+}
+
+const { data: users } = await supabase
+  .from('users')
+  .select('*')
+  .order('created_at', { ascending: false });
+---
+
+<DashboardLayout title="Users">
+  <h1 style="margin-bottom: 24px;">User Management</h1>
+
+  {message && (
+    <div class="card" style={`background: ${message.startsWith('Error') ? '#fef2f2' : '#f0fdf4'}; margin-bottom: 20px;`}>
+      {message}
+    </div>
+  )}
+
+  <div class="card" style="margin-bottom: 24px;">
+    <h2 style="margin-bottom: 16px;">Invite New User</h2>
+    <form method="POST">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+        <div>
+          <label style="display: block; margin-bottom: 4px; font-weight: 500;">Name *</label>
+          <input type="text" name="name" required />
+        </div>
+        <div>
+          <label style="display: block; margin-bottom: 4px; font-weight: 500;">Phone</label>
+          <input type="tel" name="phone" placeholder="+1..." />
+        </div>
+        <div>
+          <label style="display: block; margin-bottom: 4px; font-weight: 500;">Email</label>
+          <input type="email" name="email" />
+        </div>
+        <div>
+          <label style="display: block; margin-bottom: 4px; font-weight: 500;">Role</label>
+          <select name="role" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="btn" style="margin-top: 16px;">Send Invite</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-bottom: 16px;">All Users</h2>
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="border-bottom: 2px solid #e5e7eb;">
+          <th style="text-align: left; padding: 12px;">Name</th>
+          <th style="text-align: left; padding: 12px;">Contact</th>
+          <th style="text-align: left; padding: 12px;">Role</th>
+          <th style="text-align: left; padding: 12px;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {users?.map(u => (
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 12px;">{u.name}</td>
+            <td style="padding: 12px;">{u.phone || u.email}</td>
+            <td style="padding: 12px;">
+              <span style={`padding: 4px 8px; border-radius: 4px; font-size: 12px; background: ${u.role === 'admin' ? '#dbeafe' : '#f3f4f6'};`}>
+                {u.role}
+              </span>
+            </td>
+            <td style="padding: 12px;">
+              <span style={`padding: 4px 8px; border-radius: 4px; font-size: 12px; background: ${u.status === 'active' ? '#dcfce7' : '#fef3c7'};`}>
+                {u.status}
+              </span>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</DashboardLayout>

@@ -1,0 +1,65 @@
+---
+import AuthLayout from '../layouts/AuthLayout.astro';
+import { getSession } from '../lib/auth';
+
+// Redirect if already logged in
+const user = await getSession(Astro.cookies);
+if (user) return Astro.redirect('/');
+---
+
+<AuthLayout title="Login">
+  <h2 style="margin-bottom: 8px;">Sign In</h2>
+  <p style="color: #666; margin-bottom: 24px;">Enter your phone number or email</p>
+  
+  <form id="loginForm">
+    <input 
+      type="text" 
+      name="identifier" 
+      placeholder="Phone number or email"
+      required
+      autocomplete="tel email"
+    />
+    <button type="submit" class="btn" style="width: 100%;">Send Code</button>
+  </form>
+  
+  <div id="error" style="color: #dc2626; margin-top: 16px; display: none;"></div>
+</AuthLayout>
+
+<script>
+  const form = document.getElementById('loginForm') as HTMLFormElement;
+  const error = document.getElementById('error') as HTMLElement;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    error.style.display = 'none';
+    
+    const formData = new FormData(form);
+    const identifier = formData.get('identifier') as string;
+    
+    const btn = form.querySelector('button') as HTMLButtonElement;
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    try {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier })
+      });
+
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to send code');
+      }
+
+      // Redirect to verify page
+      window.location.href = `/verify?identifier=${encodeURIComponent(identifier)}`;
+    } catch (err: any) {
+      error.textContent = err.message;
+      error.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Send Code';
+    }
+  });
+</script>

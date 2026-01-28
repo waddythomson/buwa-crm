@@ -1,0 +1,53 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { supabase } from '../../lib/supabase';
+import { getSession } from '../../lib/auth';
+
+const user = await getSession(Astro.cookies);
+if (!user) return Astro.redirect('/login');
+
+// Handle form submission
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const name = formData.get('name') as string;
+  const phone = formData.get('phone') as string;
+  const email = formData.get('email') as string;
+
+  const { data, error } = await supabase
+    .from('contacts')
+    .insert({
+      name,
+      phone: phone || null,
+      email: email || null,
+      created_by: user.id
+    })
+    .select()
+    .single();
+
+  if (data) {
+    return Astro.redirect(`/contacts/${data.id}`);
+  }
+}
+---
+
+<DashboardLayout title="New Contact">
+  <h1 style="margin-bottom: 24px;">Add Contact</h1>
+  
+  <div class="card" style="max-width: 500px;">
+    <form method="POST">
+      <label style="display: block; margin-bottom: 8px; font-weight: 500;">Name *</label>
+      <input type="text" name="name" required />
+      
+      <label style="display: block; margin-bottom: 8px; font-weight: 500;">Phone</label>
+      <input type="tel" name="phone" placeholder="+1 (555) 123-4567" />
+      
+      <label style="display: block; margin-bottom: 8px; font-weight: 500;">Email</label>
+      <input type="email" name="email" placeholder="email@example.com" />
+      
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button type="submit" class="btn">Save Contact</button>
+        <a href="/contacts" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</DashboardLayout>

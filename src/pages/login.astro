@@ -9,29 +9,36 @@ if (user) return Astro.redirect('/');
 
 <AuthLayout title="Login">
   <h2 style="margin-bottom: 8px;">Sign In</h2>
-  <p style="color: #666; margin-bottom: 24px;">Enter your phone number or email</p>
+  <p style="color: #666; margin-bottom: 24px;">Enter your email to receive a login link</p>
   
   <form id="loginForm">
     <input 
-      type="text" 
+      type="email" 
       name="identifier" 
-      placeholder="Phone number or email"
+      placeholder="Email address"
       required
-      autocomplete="tel email"
+      autocomplete="email"
     />
-    <button type="submit" class="btn" style="width: 100%;">Send Code</button>
+    <button type="submit" class="btn" style="width: 100%;">Send Login Link</button>
   </form>
+  
+  <div id="success" style="color: #16a34a; margin-top: 16px; display: none;">
+    <p>✓ Login link sent! Check your email and click the link to sign in.</p>
+    <p style="color: #666; font-size: 14px; margin-top: 8px;">Don't see it? Check your spam folder.</p>
+  </div>
   
   <div id="error" style="color: #dc2626; margin-top: 16px; display: none;"></div>
 </AuthLayout>
 
 <script>
   const form = document.getElementById('loginForm') as HTMLFormElement;
+  const success = document.getElementById('success') as HTMLElement;
   const error = document.getElementById('error') as HTMLElement;
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     error.style.display = 'none';
+    success.style.display = 'none';
     
     const formData = new FormData(form);
     const identifier = formData.get('identifier') as string;
@@ -50,16 +57,17 @@ if (user) return Astro.redirect('/');
       const data = await res.json();
       
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to send code');
+        throw new Error(data.error || 'Failed to send link');
       }
 
-      // Redirect to verify page
-      window.location.href = `/verify?identifier=${encodeURIComponent(identifier)}`;
+      // Show success message
+      form.style.display = 'none';
+      success.style.display = 'block';
     } catch (err: any) {
       error.textContent = err.message;
       error.style.display = 'block';
       btn.disabled = false;
-      btn.textContent = 'Send Code';
+      btn.textContent = 'Send Login Link';
     }
   });
 </script>

@@ -17,7 +17,7 @@ export async function getSession(cookies: { get: (name: string) => { value: stri
   return session.user as User;
 }
 
-// Create session after OTP verification
+// Create session after verification
 export async function createSession(userId: string): Promise<string> {
   const token = crypto.randomUUID() + crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
@@ -31,7 +31,7 @@ export async function createSession(userId: string): Promise<string> {
   return token;
 }
 
-// Find user by phone or email
+// Find user by phone or email (for login form)
 export async function findUser(identifier: string): Promise<User | null> {
   const isPhone = identifier.startsWith('+') || /^\d+$/.test(identifier);
   const column = isPhone ? 'phone' : 'email';
@@ -49,6 +49,25 @@ export async function findUser(identifier: string): Promise<User | null> {
     .single();
 
   return data as User | null;
+}
+
+// Find user by email specifically (for Supabase Auth callback)
+export async function findUserByEmail(email: string): Promise<User | null> {
+  const { data } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', email.toLowerCase())
+    .single();
+
+  return data as User | null;
+}
+
+// Activate an invited user
+export async function activateUser(userId: string): Promise<void> {
+  await supabase
+    .from('users')
+    .update({ status: 'active' })
+    .eq('id', userId);
 }
 
 // Logout - delete session

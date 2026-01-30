@@ -2,23 +2,29 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
 
+// Client for general queries
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Admin client with service role for auth operations
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey);
 
 // Types
 export interface User {
   id: string;
   phone: string | null;
   email: string | null;
-  name: string;
+  name: string | null;
   role: 'admin' | 'user';
   status: 'invited' | 'active';
+  invited_by: string | null;
   created_at: string;
 }
 
 export interface Contact {
   id: string;
-  name: string;
+  name: string | null;
   phone: string | null;
   email: string | null;
   created_at: string;

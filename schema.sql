@@ -1,71 +1,75 @@
 -- BuWa CRM Database Schema
--- Run this in Supabase SQL Editor (supabase.com → your project → SQL Editor)
+-- Run this in Supabase SQL Editor
 
--- Users table (CRM users who can log in)
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    phone VARCHAR(20) UNIQUE,
-    email VARCHAR(255) UNIQUE,
-    name VARCHAR(255),
-    role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('admin', 'user')),
-    status VARCHAR(20) DEFAULT 'invited' CHECK (status IN ('invited', 'active')),
-    invited_by UUID REFERENCES users(id),
-    created_at TIMESTAMPTZ DEFAULT NOW()
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  phone TEXT,
+  role TEXT DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+  status TEXT DEFAULT 'invited' CHECK (status IN ('invited', 'active')),
+  invited_by UUID REFERENCES users(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Contacts table (people you communicate with)
-CREATE TABLE contacts (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255),
-    phone VARCHAR(20),
-    email VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    created_by UUID REFERENCES users(id)
+-- Contacts table
+CREATE TABLE IF NOT EXISTS contacts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT,
+  phone TEXT,
+  email TEXT,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Conversations table (threads between you and a contact)
+CREATE TABLE IF NOT EXISTS conversations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  contact_id UUID REFERENCES contacts(id) ON DELETE CASCADE,
+  status TEXT DEFAULT 'open' CHECK (status IN ('open', 'pending', 'closed')),
+  assigned_to UUID REFERENCES users(id),
+  subject TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  last_message_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Communications table (SMS, calls, voicemails)
-CREATE TABLE communications (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    contact_id UUID REFERENCES contacts(id) ON DELETE CASCADE,
-    type VARCHAR(20) NOT NULL CHECK (type IN ('sms', 'call', 'voicemail')),
-    direction VARCHAR(20) NOT NULL CHECK (direction IN ('inbound', 'outbound')),
-    content TEXT,
-    duration INTEGER,
-    recording_url TEXT,
-    twilio_sid VARCHAR(50),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    user_id UUID REFERENCES users(id)
+CREATE TABLE IF NOT EXISTS communications (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  contact_id UUID REFERENCES contacts(id) ON DELETE CASCADE,
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('sms', 'call', 'voicemail')),
+  direction TEXT NOT NULL CHECK (direction IN ('inbound', 'outbound')),
+  content TEXT,
+  duration INTEGER,
+  recording_url TEXT,
+  twilio_sid TEXT,
+  user_id UUID REFERENCES users(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Notes table (inline notes on contact timelines)
-CREATE TABLE notes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    contact_id UUID REFERENCES contacts(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES users(id),
-    content TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    position_after_communication_id UUID REFERENCES communications(id)
+-- Notes table
+CREATE TABLE IF NOT EXISTS notes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  contact_id UUID REFERENCES contacts(id) ON DELETE CASCADE,
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id),
+  content TEXT NOT NULL,
+  position_after_communication_id UUID REFERENCES communications(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Sessions table (for auth)
-CREATE TABLE sessions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    token VARCHAR(255) UNIQUE NOT NULL,
-    expires_at TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Indexes for performance
-CREATE INDEX idx_communications_contact_id ON communications(contact_id);
-CREATE INDEX idx_communications_created_at ON communications(created_at);
-CREATE INDEX idx_notes_contact_id ON notes(contact_id);
-CREATE INDEX idx_contacts_phone ON contacts(phone);
-CREATE INDEX idx_contacts_email ON contacts(email);
-CREATE INDEX idx_sessions_token ON sessions(token);
-CREATE INDEX idx_sessions_expires ON sessions(expires_at);
-
--- Create the first admin user (YOU!)
-INSERT INTO users (phone, email, name, role, status) 
-VALUES ('+18032001614', 'waddythomson@arsenalhill.com', 'Waddy Thomson', 'admin', 'active');
-
+-- Indexes for better query performance
+CREATE IF NOT EXISTS idx_contacts_phone ON contacts(phone);
+CREATE INDEX IF NOT EXISTS idx_contacts_email ON contacts(email);
+CREATE INDEX IF NOT EXISTS idx_conversations_contact ON conversations(contact_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_status ON conversations(status);
+CREATE INDEX IF NOT EXISTS idx_conversations_assigned ON conversations(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_conversations_last_message ON conversations(last_message_at);
+CREATE INDEX IF NOT EXISTS idx_communications_contact ON communications(contact_id);
+CREATE INDEX IF NOT EXISTS idx_communications_conversation ON communications(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_communications_created ON communications(created_at);
+CREATE INDEX IF NOT EXISTS idx_notes_contact ON notes(contact_id);
+CREATE INDEX IF NOT EXISTS idx_notes_conversation ON notes(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);

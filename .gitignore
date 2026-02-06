@@ -1,5 +1,27 @@
+# Dependencies
 node_modules/
-dist/
+
+# Next.js
+.next/
+out/
+
+# Environment
 .env
+.env.local
+.env.*.local
+
+# Debug
+npm-debug.log*
+
+# Vercel
 .vercel
-.astro
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,19 +1,25 @@
 {
   "name": "buwa-crm",
-  "type": "module",
   "version": "1.0.0",
+  "private": true,
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "astro": "^5.0.0",
-    "@astrojs/react": "^4.0.0",
-    "@astrojs/vercel": "^8.0.0",
+    "next": "14.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "@supabase/supabase-js": "^2.39.0",
-    "twilio": "^4.21.0"
+    "@supabase/ssr": "^0.1.0",
+    "twilio": "^4.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^5.3.0"
   }
 }

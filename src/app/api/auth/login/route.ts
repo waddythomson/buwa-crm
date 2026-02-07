@@ -39,12 +39,14 @@ export async function POST(request: NextRequest) {
         .eq('id', user.id);
     }
 
-    // Set session cookie
-    const session = JSON.stringify({ userId: user.id, createdAt: Date.now() });
+    // Set session cookie (base64 encoded to avoid special char issues)
+    const sessionData = JSON.stringify({ userId: user.id, createdAt: Date.now() });
+    const sessionToken = Buffer.from(sessionData).toString('base64');
+    
     const response = NextResponse.json({ success: true });
-    response.cookies.set('session', session, {
+    response.cookies.set('session', sessionToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 24 * 7, // 7 days

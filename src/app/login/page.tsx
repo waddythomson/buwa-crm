@@ -19,6 +19,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
@@ -30,8 +31,8 @@ export default function LoginPage() {
         return;
       }
 
-      router.push('/');
-      router.refresh();
+      // Force a hard navigation to ensure cookie is read
+      window.location.href = '/';
     } catch (err) {
       setError('Something went wrong');
       setLoading(false);

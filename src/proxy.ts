@@ -8,7 +8,8 @@ const publicRoutes = [
   '/api/auth/login',
   '/api/auth/send-magic-link',
   '/api/twilio',
-  '/api/leads'
+  '/api/leads',
+  '/api/health'
 ];
 
 export function proxy(request: NextRequest) {

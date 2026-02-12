@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -39,6 +39,17 @@ interface InboxListProps {
 export default function InboxList({ conversations, currentUserId }: InboxListProps) {
   const router = useRouter();
   const [filter, setFilter] = useState<'all' | 'mine' | 'unassigned'>('all');
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [sending, setSending] = useState(false);
+
+  // Auto-refresh every 15 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      router.refresh();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [router]);
 
   const filteredConversations = conversations.filter(conv => {
     if (filter === 'mine') return conv.assigned_to === currentUserId;
@@ -116,6 +127,43 @@ export default function InboxList({ conversations, currentUserId }: InboxListPro
     if (res.ok) {
       router.refresh();
     }
+  };
+
+  const handleReply = async (conv: Conversation, e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!replyText.trim() || !conv.contact?.phone) return;
+
+    setSending(true);
+    try {
+      const res = await fetch('/api/twilio/send-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contactId: conv.contact_id,
+          to: conv.contact.phone,
+          message: replyText,
+          userId: currentUserId,
+        }),
+      });
+
+      if (res.ok) {
+        setReplyText('');
+        setReplyingTo(null);
+        router.refresh();
+      }
+    } catch (err) {
+      console.error('Failed to send reply:', err);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const toggleReply = (convId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setReplyingTo(replyingTo === convId ? null : convId);
+    setReplyText('');
   };
 
   return (
@@ -217,6 +265,22 @@ export default function InboxList({ conversations, currentUserId }: InboxListPro
                     </span>
                     
                     <div style={{ display: 'flex', gap: '4px' }}>
+                      {conv.contact?.phone && (
+                        <button
+                          onClick={(e) => toggleReply(conv.id, e)}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '11px',
+                            border: '1px solid #3b82f6',
+                            borderRadius: '4px',
+                            background: replyingTo === conv.id ? '#3b82f6' : 'white',
+                            color: replyingTo === conv.id ? 'white' : '#3b82f6',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Reply
+                        </button>
+                      )}
                       {!conv.assigned_to && (
                         <button
                           onClick={(e) => handleAssign(conv.id, e)}
@@ -265,6 +329,38 @@ export default function InboxList({ conversations, currentUserId }: InboxListPro
                     </div>
                   </div>
                 </div>
+
+                {replyingTo === conv.id && (
+                  <form
+                    onClick={(e) => e.stopPropagation()}
+                    onSubmit={(e) => { e.preventDefault(); handleReply(conv, e); }}
+                    style={{
+                      marginTop: '12px',
+                      paddingTop: '12px',
+                      borderTop: '1px solid #e5e7eb',
+                      display: 'flex',
+                      gap: '8px',
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder={`Reply to ${conv.contact?.name || conv.contact?.phone || 'contact'}...`}
+                      style={{ flex: 1, padding: '8px 12px', fontSize: '14px' }}
+                      autoFocus
+                      onClick={(e) => e.preventDefault()}
+                    />
+                    <button
+                      type="submit"
+                      className="btn"
+                      disabled={sending || !replyText.trim()}
+                      style={{ padding: '8px 16px', fontSize: '13px' }}
+                    >
+                      {sending ? 'Sending...' : 'Send'}
+                    </button>
+                  </form>
+                )}
               </div>
             </Link>
           ))}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { twilioClient, twilioPhoneNumber } from '@/lib/twilio';
+import { getTwilioClient, getTwilioPhoneNumber } from '@/lib/twilio';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getOrCreateConversation, updateConversationTimestamp } from '@/lib/conversations';
 
@@ -19,9 +19,9 @@ export async function POST(request: NextRequest) {
     formattedPhone = '+' + formattedPhone;
 
     // Send via Twilio
-    const twilioMessage = await twilioClient.messages.create({
+    const twilioMessage = await getTwilioClient().messages.create({
       body: message,
-      from: twilioPhoneNumber,
+      from: getTwilioPhoneNumber(),
       to: formattedPhone
     });
 

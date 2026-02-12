@@ -30,8 +30,13 @@ export default async function DashboardPage() {
     .select('*', { count: 'exact', head: true })
     .gte('created_at', new Date().toISOString().split('T')[0]);
 
+  const { count: openConversations } = await supabaseAdmin
+    .from('conversations')
+    .select('*', { count: 'exact', head: true })
+    .in('status', ['open', 'pending']);
+
   return (
-    <DashboardLayout user={user}>
+    <DashboardLayout user={user} openConversationCount={openConversations || 0}>
       <h1 style={{ marginBottom: '24px' }}>Dashboard</h1>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
@@ -42,6 +47,12 @@ export default async function DashboardPage() {
         <div className="card">
           <div style={{ color: '#6b7280', fontSize: '14px', marginBottom: '4px' }}>Today's Activity</div>
           <div style={{ fontSize: '32px', fontWeight: 'bold' }}>{todayComms || 0}</div>
+        </div>
+        <div className="card">
+          <Link href="/inbox" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div style={{ color: '#6b7280', fontSize: '14px', marginBottom: '4px' }}>Open Conversations</div>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', color: (openConversations || 0) > 0 ? '#f59e0b' : '#333' }}>{openConversations || 0}</div>
+          </Link>
         </div>
         <div className="card">
           <Link href="/contacts/new" className="btn" style={{ display: 'block', textAlign: 'center' }}>

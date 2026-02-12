@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { setSession } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
@@ -39,17 +40,15 @@ export async function POST(request: NextRequest) {
         .eq('id', user.id);
     }
 
-    // Set session cookie (base64 encoded to avoid special char issues)
-    const sessionData = JSON.stringify({ userId: user.id, createdAt: Date.now() });
-    const sessionToken = Buffer.from(sessionData).toString('base64');
-    
+    const sessionToken = setSession(user.id);
     const response = NextResponse.json({ success: true });
+    const isSecure = request.nextUrl.protocol === 'https:';
     response.cookies.set('session', sessionToken, {
       httpOnly: true,
-      secure: true,
+      secure: isSecure,
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 90, // 90 days
     });
 
     return response;

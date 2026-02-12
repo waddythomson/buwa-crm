@@ -7,12 +7,15 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [magicMessage, setMagicMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [magicLoading, setMagicLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setMagicMessage('');
     setLoading(true);
 
     try {
@@ -39,6 +42,37 @@ export default function LoginPage() {
     }
   };
 
+  const handleMagicLink = async () => {
+    setError('');
+    setMagicMessage('');
+
+    if (!email) {
+      setError('Enter your email to receive a sign-in link');
+      return;
+    }
+
+    setMagicLoading(true);
+    try {
+      const res = await fetch('/api/auth/send-magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to send magic link');
+      } else {
+        setMagicMessage('Check your email for a sign-in link.');
+      }
+    } catch (err) {
+      setError('Something went wrong');
+    } finally {
+      setMagicLoading(false);
+    }
+  };
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6' }}>
       <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
@@ -47,6 +81,12 @@ export default function LoginPage() {
         {error && (
           <div style={{ background: '#fee2e2', color: '#dc2626', padding: '12px', borderRadius: '6px', marginBottom: '16px' }}>
             {error}
+          </div>
+        )}
+
+        {magicMessage && (
+          <div className="alert alert-info">
+            {magicMessage}
           </div>
         )}
 
@@ -78,6 +118,18 @@ export default function LoginPage() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+
+        <div style={{ marginTop: '12px' }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={magicLoading}
+            style={{ width: '100%' }}
+            onClick={handleMagicLink}
+          >
+            {magicLoading ? 'Sending link...' : 'Email me a sign-in link'}
+          </button>
+        </div>
       </div>
     </div>
   );

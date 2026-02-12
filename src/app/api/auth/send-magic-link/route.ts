@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Send magic link via Supabase
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://buwa-crm.vercel.app';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
     const { error } = await supabaseAdmin.auth.signInWithOtp({
       email: email.toLowerCase(),
       options: {

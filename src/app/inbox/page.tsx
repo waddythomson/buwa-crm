@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
+import { getOpenConversationCount } from '@/lib/stats';
 import DashboardLayout from '@/components/DashboardLayout';
 import InboxList from '@/components/InboxList';
 
@@ -37,8 +38,10 @@ export default async function InboxPage() {
     })
   );
 
+  const openCount = await getOpenConversationCount();
+
   return (
-    <DashboardLayout user={session}>
+    <DashboardLayout user={session} openConversationCount={openCount}>
       <div className="page-header">
         <h1>Inbox</h1>
       </div>

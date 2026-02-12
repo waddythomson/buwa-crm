@@ -2,9 +2,16 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Routes that don't require auth
-const publicRoutes = ['/login', '/api/auth/login', '/api/twilio'];
+const publicRoutes = [
+  '/login',
+  '/auth/callback',
+  '/api/auth/login',
+  '/api/auth/send-magic-link',
+  '/api/twilio',
+  '/api/leads'
+];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Allow public routes and static files

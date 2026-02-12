@@ -1,8 +1,10 @@
 import { redirect, notFound } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
+import { getOpenConversationCount } from '@/lib/stats';
 import DashboardLayout from '@/components/DashboardLayout';
 import ContactTimeline from '@/components/ContactTimeline';
+import ContactInfo from '@/components/ContactInfo';
 
 interface PageProps {
   params: { id: string };
@@ -39,8 +41,10 @@ export default async function ContactDetailPage({ params }: PageProps) {
     .eq('contact_id', params.id)
     .order('created_at', { ascending: true });
 
+  const openCount = await getOpenConversationCount();
+
   return (
-    <DashboardLayout user={user}>
+    <DashboardLayout user={user} openConversationCount={openCount}>
       <div style={{ marginBottom: '24px' }}>
         <a href="/contacts" style={{ color: '#6b7280', fontSize: '14px' }}>← Back to Contacts</a>
       </div>
@@ -48,21 +52,7 @@ export default async function ContactDetailPage({ params }: PageProps) {
       <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '24px' }}>
         {/* Contact Info */}
         <div className="card">
-          <h2 style={{ marginBottom: '16px' }}>{contact.name || 'Unnamed Contact'}</h2>
-          
-          {contact.phone && (
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ color: '#6b7280', fontSize: '12px' }}>Phone</div>
-              <div>{contact.phone}</div>
-            </div>
-          )}
-          
-          {contact.email && (
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ color: '#6b7280', fontSize: '12px' }}>Email</div>
-              <div>{contact.email}</div>
-            </div>
-          )}
+          <ContactInfo contact={contact} />
 
           <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #e5e7eb' }}>
             <div style={{ color: '#6b7280', fontSize: '12px', marginBottom: '8px' }}>Quick Actions</div>

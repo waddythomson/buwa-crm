@@ -9,16 +9,17 @@ interface DashboardLayoutProps {
     name: string;
     role: string;
   };
+  openConversationCount?: number;
 }
 
-export default function DashboardLayout({ children, user }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, user, openConversationCount }: DashboardLayoutProps) {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/', label: 'Dashboard', icon: '📊' },
-    { href: '/inbox', label: 'Inbox', icon: '📥' },
-    { href: '/contacts', label: 'Contacts', icon: '👥' },
-    ...(user.role === 'admin' ? [{ href: '/users', label: 'Users', icon: '⚙️' }] : []),
+    { href: '/', label: 'Dashboard', icon: '📊', badge: 0 },
+    { href: '/inbox', label: 'Inbox', icon: '📥', badge: openConversationCount || 0 },
+    { href: '/contacts', label: 'Contacts', icon: '👥', badge: 0 },
+    ...(user.role === 'admin' ? [{ href: '/users', label: 'Users', icon: '⚙️', badge: 0 }] : []),
   ];
 
   return (
@@ -33,8 +34,23 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
               key={item.href}
               href={item.href}
               className={pathname === item.href ? 'active' : ''}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
             >
-              {item.icon} {item.label}
+              <span>{item.icon} {item.label}</span>
+              {item.badge > 0 && (
+                <span style={{
+                  background: '#ef4444',
+                  color: 'white',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '2px 7px',
+                  borderRadius: '10px',
+                  minWidth: '20px',
+                  textAlign: 'center',
+                }}>
+                  {item.badge}
+                </span>
+              )}
             </Link>
           ))}
         </nav>

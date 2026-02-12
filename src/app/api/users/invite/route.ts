@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase';
+import { decodeSessionCookie } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
     // Check auth
-    const sessionCookie = cookies().get('session');
-    if (!sessionCookie?.value) {
+    const sessionCookie = (await cookies()).get('session');
+    const session = decodeSessionCookie(sessionCookie?.value);
+    if (!session?.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const session = JSON.parse(sessionCookie.value);
 
     // Check if user is admin
     const { data: currentUser } = await supabaseAdmin
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Send invite magic link via Supabase
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://buwa-crm.vercel.app';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
     const { error: inviteError } = await supabaseAdmin.auth.signInWithOtp({
       email: email.toLowerCase(),
       options: {

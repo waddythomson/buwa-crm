@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { twilioClient, twilioPhoneNumber } from '@/lib/twilio';
+import { getTwilioClient, getTwilioPhoneNumber } from '@/lib/twilio';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getOrCreateConversation, updateConversationTimestamp } from '@/lib/conversations';
 
@@ -21,9 +21,9 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://buwa-crm.vercel.app';
 
     // Initiate call via Twilio
-    const call = await twilioClient.calls.create({
+    const call = await getTwilioClient().calls.create({
       url: `${baseUrl}/api/twilio/outbound-call`,
-      from: twilioPhoneNumber,
+      from: getTwilioPhoneNumber(),
       to: formattedPhone,
       record: true,
       recordingStatusCallback: `${baseUrl}/api/twilio/recording`
